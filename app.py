@@ -17,30 +17,36 @@ genai.configure(api_key=os.getenv("GOOGLE_GEMINI_API"))
 
 # Send image + prompt to Gemini
 def get_gemini_response(input_text, pdf_content, prompt):
-    model = genai.GenerativeModel('gemini-1.5-flash')  # or gemini-1.5-pro
-    response = model.generate_content([
-        {"text": input_text},
-        pdf_content[0],  # {"mime_type": "image/jpeg", "data": base64_str}
-        {"text": prompt}
-    ])
-    return response.text
+    try:
+        model = genai.GenerativeModel('gemini-2.5-flash')  # use gemini-1.5-pro if you have quota
+        response = model.generate_content([
+            {"text": input_text},
+            pdf_content[0],
+            {"text": prompt}
+        ])
+        return response.text
+    except Exception as e:
+        return f" Gemini API Error: {e}"
 
-# Extract 1st page of PDF as JPEG and base64 encode it (compatible with Streamlit Cloud)
+# 🖼 Convert first page of PDF to base64-encoded image
 def input_pdf_setup(uploaded_file):
     if uploaded_file is not None:
-        doc = fitz.open(stream=uploaded_file.read(), filetype="pdf")
-        page = doc.load_page(0)  # Load first page
-        pix = page.get_pixmap(dpi=150)  # Convert to image
-        img_byte_arr = pix.tobytes("jpeg")
-
-        pdf_parts = [{
-            "mime_type": "image/jpeg",
-            "data": base64.b64encode(img_byte_arr).decode()
-        }]
-        return pdf_parts
+        try:
+            doc = fitz.open(stream=uploaded_file.read(), filetype="pdf")
+            if doc.page_count == 0:
+                raise ValueError("PDF has no pages.")
+            page = doc.load_page(0)
+            pix = page.get_pixmap(dpi=150)
+            img_byte_arr = pix.tobytes("jpeg")
+            return [{
+                "mime_type": "image/jpeg",
+                "data": base64.b64encode(img_byte_arr).decode()
+            }]
+        except Exception as e:
+            st.error(f" Error processing PDF: {e}")
+            return []
     else:
         raise FileNotFoundError("No file uploaded")
-
 # Streamlit UI
 st.set_page_config(page_title="ATS Resume Expert")
 st.header("ATS Resume Expert")
