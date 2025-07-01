@@ -7,7 +7,7 @@ import os
 import io
 import base64
 from PIL import Image
-import pdf2image
+import fitz  # PyMuPDF instead of pdf2image
 import google.generativeai as genai
 from dotenv import load_dotenv
 
@@ -15,8 +15,9 @@ from dotenv import load_dotenv
 load_dotenv()
 genai.configure(api_key=os.getenv("GOOGLE_GEMINI_API"))
 
+# Send image + prompt to Gemini
 def get_gemini_response(input_text, pdf_content, prompt):
-    model = genai.GenerativeModel('gemini-2.5-flash')
+    model = genai.GenerativeModel('gemini-1.5-flash')  # or gemini-1.5-pro
     response = model.generate_content([
         {"text": input_text},
         pdf_content[0],  # {"mime_type": "image/jpeg", "data": base64_str}
@@ -24,25 +25,21 @@ def get_gemini_response(input_text, pdf_content, prompt):
     ])
     return response.text
 
+# Extract 1st page of PDF as JPEG and base64 encode it (compatible with Streamlit Cloud)
 def input_pdf_setup(uploaded_file):
     if uploaded_file is not None:
-        # Convert PDF to image (first page only)
-        images = pdf2image.convert_from_bytes(uploaded_file.read())
-        first_page = images[0]
+        doc = fitz.open(stream=uploaded_file.read(), filetype="pdf")
+        page = doc.load_page(0)  # Load first page
+        pix = page.get_pixmap(dpi=150)  # Convert to image
+        img_byte_arr = pix.tobytes("jpeg")
 
-        # Convert image to bytes
-        img_byte_arr = io.BytesIO()
-        first_page.save(img_byte_arr, format='JPEG')
-        img_byte_arr = img_byte_arr.getvalue()
-
-        # Base64 encode image
         pdf_parts = [{
             "mime_type": "image/jpeg",
             "data": base64.b64encode(img_byte_arr).decode()
         }]
         return pdf_parts
     else:
-        raise FileNotFoundError
+        raise FileNotFoundError("No file uploaded")
 
 # Streamlit UI
 st.set_page_config(page_title="ATS Resume Expert")
