@@ -7,7 +7,7 @@ import os
 import io
 import base64
 from PIL import Image
-import fitz  # PyMuPDF instead of pdf2image
+import pdf2image
 import google.generativeai as genai
 from dotenv import load_dotenv
 
@@ -15,38 +15,35 @@ from dotenv import load_dotenv
 load_dotenv()
 genai.configure(api_key=os.getenv("GOOGLE_GEMINI_API"))
 
-# Send image + prompt to Gemini
 def get_gemini_response(input_text, pdf_content, prompt):
-    try:
-        model = genai.GenerativeModel('gemini-2.5-flash')  # use gemini-1.5-pro if you have quota
-        response = model.generate_content([
-            {"text": input_text},
-            pdf_content[0],
-            {"text": prompt}
-        ])
-        return response.text
-    except Exception as e:
-        return f" Gemini API Error: {e}"
+    model = genai.GenerativeModel('gemini-2.5-flash')
+    response = model.generate_content([
+        {"text": input_text},
+        pdf_content[0],  # {"mime_type": "image/jpeg", "data": base64_str}
+        {"text": prompt}
+    ])
+    return response.text
 
-# 🖼 Convert first page of PDF to base64-encoded image
 def input_pdf_setup(uploaded_file):
     if uploaded_file is not None:
-        try:
-            doc = fitz.open(stream=uploaded_file.read(), filetype="pdf")
-            if doc.page_count == 0:
-                raise ValueError("PDF has no pages.")
-            page = doc.load_page(0)
-            pix = page.get_pixmap(dpi=150)
-            img_byte_arr = pix.tobytes("jpeg")
-            return [{
-                "mime_type": "image/jpeg",
-                "data": base64.b64encode(img_byte_arr).decode()
-            }]
-        except Exception as e:
-            st.error(f" Error processing PDF: {e}")
-            return []
+        # Convert PDF to image (first page only)
+        images = pdf2image.convert_from_bytes(uploaded_file.read())
+        first_page = images[0]
+
+        # Convert image to bytes
+        img_byte_arr = io.BytesIO()
+        first_page.save(img_byte_arr, format='JPEG')
+        img_byte_arr = img_byte_arr.getvalue()
+
+        # Base64 encode image
+        pdf_parts = [{
+            "mime_type": "image/jpeg",
+            "data": base64.b64encode(img_byte_arr).decode()
+        }]
+        return pdf_parts
     else:
-        raise FileNotFoundError("No file uploaded")
+        raise FileNotFoundError
+
 # Streamlit UI
 st.set_page_config(page_title="ATS Resume Expert")
 st.header("ATS Resume Expert")
