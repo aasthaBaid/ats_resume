@@ -78,7 +78,7 @@ streamlit run app.py
   → Install `poppler` and make sure it's in your system's PATH.
 
 * **`404 Model Not Found`**
-  → You're using a deprecated model. Use `"gemini-1.5-pro"` or `"gemini-1.5-flash"`.
+  → You're using a deprecated model. Use `"gemini-2.5-pro"` or `"gemini-2.5-flash"`.
 
 * **`429 Resource Exhausted`**
   → You’ve hit your quota. Use `gemini-1.5-flash`, reduce prompt size, or enable billing.
