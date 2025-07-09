@@ -1,4 +1,4 @@
-# 🤖 ATS Resume Analyzer with Gemini + Streamlit
+ # ATS Resume Analyzer with Gemini + Streamlit
 
 This is an AI-powered Resume Analyzer built with **Streamlit**, integrated with **Google's Gemini API**, designed to simulate an Applicant Tracking System (ATS). You upload your resume as a PDF, and the app intelligently parses, visualizes, and evaluates your resume content using Gemini's capabilities.
 
